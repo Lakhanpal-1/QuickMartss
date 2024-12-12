@@ -1,0 +1,6 @@
+@QuickMart_HostAddress = http://localhost:5259
+
+GET {{QuickMart_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
