@@ -27,10 +27,12 @@ namespace QuickMart.Extension
 
             // ===================== Register Repositories =====================
             services.AddScoped<IUserRepository, UserRepository>();
+            services.AddScoped<IProductRepository, ProductRepository>();
 
             // ===================== Register Services =====================
             services.AddScoped<JwtHelper>();
             services.AddScoped<IUserService, UserService>();
+            services.AddScoped<IProductService, ProductService>();
             ConfigureEmailService(services, configuration);
 
             // ===================== AutoMapper Configuration =====================
@@ -130,6 +132,7 @@ namespace QuickMart.Extension
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "QuickMartAPI", Version = "v1" });
+
                 c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
                 {
                     Description = "JWT Authorization header using the Bearer scheme",
@@ -140,6 +143,10 @@ namespace QuickMart.Extension
                     BearerFormat = "JWT"
                 });
 
+                // Map IFormFile to Swagger as binary
+                c.MapType<IFormFile>(() => new OpenApiSchema { Type = "string", Format = "binary" });
+
+                // Add security requirement
                 c.AddSecurityRequirement(new OpenApiSecurityRequirement
                 {
                     {
