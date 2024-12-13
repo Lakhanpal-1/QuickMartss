@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using QuickMart.Data.Repository;
 using System;
+using System.Net;
 
 namespace QuickMart.Services.Services
 {
@@ -23,6 +24,8 @@ namespace QuickMart.Services.Services
             userManager = _userManager;
             emailService = _emailService;
         }
+
+        #region User Management
 
         // 1. Create User (Registration)
         public async Task<ApplicationUserDTO> CreateUserAsync(ApplicationUserDTO userDTO, string roleName)
@@ -71,6 +74,10 @@ namespace QuickMart.Services.Services
             return await userRepository.GetSoftDeletedUsersAsync(); // Fetch soft-deleted users
         }
 
+        #endregion
+
+        #region Role Management
+
         // 8. Create Role (Admin only)
         public async Task<IdentityRole> CreateRoleAsync(string roleName)
         {
@@ -83,25 +90,53 @@ namespace QuickMart.Services.Services
             return await userRepository.AssignRoleToUserByIdAsync(userId, roleName);
         }
 
+        #endregion
+
+        #region Password Management
+
         // 10. Generate Password Reset Token (Forgot Password)
         public async Task<string> GeneratePasswordResetTokenAsync(string email)
         {
+            // Step 1: Find the user by their email
             var user = await userRepository.FindUserByEmailAsync(email);
             if (user == null)
             {
-                return null; // User not found
+                // User not found, return null
+                return null;
             }
 
-            var token = await userRepository.GeneratePasswordResetTokenAsync(user);
+            try
+            {
+                // Step 2: Generate a password reset token for the user
+                var token = await userRepository.GeneratePasswordResetTokenAsync(user);
+                if (string.IsNullOrEmpty(token))
+                {
+                    // If the token is null or empty, we can't proceed
+                    return null;
+                }
 
-            // Send email with the reset token
-            var resetLink = $"https://your-app.com/reset-password?token={token}&email={email}";
-            var emailBody = $"Click the link to reset your password: <a href='{resetLink}'>{resetLink}</a>";
+                // Step 3: Create the reset password link with the token
+                var clientURI = "http://localhost:4200/user/reset-password"; // This should be configurable
+                var resetLink = $"{clientURI}?token={WebUtility.UrlEncode(token)}&email={WebUtility.UrlEncode(email)}";
 
-            // Send email using the email service
-            await emailService.SendEmailAsync(email, "Password Reset", emailBody);
+                // Step 4: Prepare the email body with the reset link
+                var emailBody = $"Hello {user.FirstName},<br><br>";
+                emailBody += "You requested a password reset. Please click the link below to reset your password:<br><br>";
+                emailBody += $"<a href='{resetLink}'>Reset Password</a><br><br>";
+                emailBody += "If you did not request a password reset, please ignore this email.";
 
-            return token; // Optional: return the token for debugging
+                // Step 5: Send the email using the email service
+                await emailService.SendEmailAsync(email, "Password Reset", emailBody);
+
+                return token; // Return the token for debugging/logging purposes
+            }
+            catch (Exception ex)
+            {
+                // Log the exception here for debugging or alerting purposes
+                Console.WriteLine($"Error generating password reset token: {ex.Message}");
+                // Optionally, you can rethrow or handle the error as needed
+                throw;
+            }
         }
 
         // 11. Reset Password
@@ -115,5 +150,7 @@ namespace QuickMart.Services.Services
 
             return await userRepository.ResetPasswordAsync(user, token, newPassword);
         }
+
+        #endregion
     }
 }

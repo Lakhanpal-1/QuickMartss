@@ -11,7 +11,8 @@ namespace QuickMart.Services.Services
         private readonly string senderEmail;
         private readonly string senderPassword;
 
-        // Constructor to initialize SMTP details
+        #region Constructor
+
         public EmailService(string smtpServer, int port, string senderEmail, string senderPassword)
         {
             this.smtpServer = smtpServer;
@@ -20,25 +21,38 @@ namespace QuickMart.Services.Services
             this.senderPassword = senderPassword; // App password comes from the configuration
         }
 
-        // Method to send the email asynchronously
+        #endregion
+
+        #region Send Email Method
+
         public async Task SendEmailAsync(string recipientEmail, string subject, string body)
         {
-            using (var client = new SmtpClient(smtpServer, port))
+            try
             {
-                client.Credentials = new NetworkCredential(senderEmail, senderPassword); // Use the App password here
-                client.EnableSsl = true; // Ensure SSL is enabled for secure connection
-
-                var mailMessage = new MailMessage
+                using (var client = new SmtpClient(smtpServer, port))
                 {
-                    From = new MailAddress(senderEmail),
-                    Subject = subject,
-                    Body = body,
-                    IsBodyHtml = true // Set the body as HTML
-                };
+                    client.Credentials = new NetworkCredential(senderEmail, senderPassword); // Use the App password here
+                    client.EnableSsl = true; // Ensure SSL is enabled for secure connection
 
-                mailMessage.To.Add(recipientEmail); // Add recipient email
-                await client.SendMailAsync(mailMessage); // Send the email asynchronously
+                    var mailMessage = new MailMessage
+                    {
+                        From = new MailAddress(senderEmail),
+                        Subject = subject,
+                        Body = body,
+                        IsBodyHtml = true // Set the body as HTML
+                    };
+
+                    mailMessage.To.Add(recipientEmail); // Add recipient email
+                    await client.SendMailAsync(mailMessage); // Send the email asynchronously
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log the exception or rethrow based on your logging strategy
+                throw new InvalidOperationException("An error occurred while sending the email", ex);
             }
         }
+
+        #endregion
     }
 }

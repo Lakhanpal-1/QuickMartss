@@ -28,6 +28,7 @@ app.UseCors("AllowAll");
 app.UseAuthentication();
 app.UseAuthorization();
 
+// Map the controllers to the app
 app.MapControllers();
 
 app.Run();

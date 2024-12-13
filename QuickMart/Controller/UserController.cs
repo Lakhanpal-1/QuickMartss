@@ -6,6 +6,8 @@ using QuickMart.Services.Helpers;
 using QuickMart.Data.DTO;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
+using Swashbuckle.AspNetCore.Annotations;
+using Microsoft.AspNetCore.Identity;
 
 namespace QuickMart.Controller
 {
@@ -22,32 +24,29 @@ namespace QuickMart.Controller
             jwtHelper = _jwtHelper;
         }
 
-        //
+        #region User Registration and Authentication
 
         /// <summary>
         /// Registers a new user.
         /// </summary>
-        /// <param name="userDTO">The user data to be registered.</param>
-        /// <returns>Returns the created user data.</returns>
-        /// <response code="201">Returns if the user was successfully registered.</response>
-        /// <response code="400">If the user data is invalid.</response>
-        /// <response code="500">If an error occurs while registering the user.</response>
         [HttpPost("register")]
+        [SwaggerResponse(201, "User successfully created.", typeof(ApplicationUserDTO))]
+        [SwaggerResponse(400, "Invalid user data.")]
+        [SwaggerResponse(500, "Internal server error.")]
         public async Task<IActionResult> CreateUser([FromBody] ApplicationUserDTO userDTO)
         {
-            if (userDTO == null || string.IsNullOrEmpty(userDTO.Email) || string.IsNullOrEmpty(userDTO.PasswordHash))
+            if (!ModelState.IsValid)
             {
-                return BadRequest("Invalid user data.");
+                return BadRequest(ModelState);
             }
 
             try
             {
-                var createdUser = await userService.CreateUserAsync(userDTO, userDTO.Role ?? "User");
+                var createdUser = await userService.CreateUserAsync(userDTO, userDTO.Role);
                 return CreatedAtAction(nameof(CreateUser), createdUser);
             }
             catch (Exception ex)
             {
-                // Check if the exception is about email already existing
                 if (ex.Message.Contains("already exists"))
                 {
                     return BadRequest(ex.Message);
@@ -56,16 +55,13 @@ namespace QuickMart.Controller
             }
         }
 
-
-
         /// <summary>
         /// Authenticates a user and generates a JWT token.
         /// </summary>
-        /// <param name="loginDTO">The login credentials (email and password).</param>
-        /// <returns>Returns the JWT token for the authenticated user.</returns>
-        /// <response code="200">Returns the JWT token if authentication is successful.</response>
-        /// <response code="401">If the credentials are invalid.</response>
         [HttpPost("login")]
+        [SwaggerResponse(200, "User authenticated successfully.", typeof(object))]
+        [SwaggerResponse(401, "Invalid credentials.")]
+        [SwaggerResponse(500, "Internal server error.")]
         public async Task<IActionResult> AuthenticateUser([FromBody] LoginDTO loginDTO)
         {
             var user = await userService.AuthenticateUserAsync(loginDTO.Email, loginDTO.Password);
@@ -74,21 +70,23 @@ namespace QuickMart.Controller
                 return Unauthorized("Invalid credentials");
             }
 
-            var token = jwtHelper.GenerateToken(user);  // Ensure you have this method for generating JWT
+            var token = jwtHelper.GenerateToken(user);
             return Ok(new { Token = token });
         }
 
+        #endregion
 
+        #region User Information Retrieval
 
         /// <summary>
         /// Retrieves the logged-in user's information.
         /// </summary>
-        /// <returns>Returns the user's data if authorized.</returns>
-        /// <response code="200">Returns the user data.</response>
-        /// <response code="401">If the user is not authorized.</response>
-        /// <response code="500">If an error occurs while fetching the user information.</response>
         [HttpGet("ByUserid")]
         [Authorize]
+        [SwaggerResponse(200, "User information retrieved successfully.", typeof(ApplicationUserDTO))]
+        [SwaggerResponse(401, "Unauthorized.")]
+        [SwaggerResponse(404, "User not found.")]
+        [SwaggerResponse(500, "Internal server error.")]
         public async Task<IActionResult> GetUserByUserId()
         {
             var userId = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -113,28 +111,19 @@ namespace QuickMart.Controller
             }
         }
 
-
-
         /// <summary>
         /// Retrieves all users (Admin/Manager role required).
         /// </summary>
-        /// <returns>Returns a list of users.</returns>
-        /// <response code="200">Returns the list of users.</response>
-        /// <response code="401">If the user is not authorized.</response>
-        /// <response code="500">If an error occurs while fetching the users.</response>
         [HttpGet("GetAll")]
         [Authorize(Roles = "Admin,Manager")]
+        [SwaggerResponse(200, "List of users retrieved successfully.", typeof(IEnumerable<ApplicationUserDTO>))]
+        [SwaggerResponse(401, "Unauthorized.")]
+        [SwaggerResponse(500, "Internal server error.")]
         public async Task<IActionResult> GetAllUsers()
         {
-            var userId = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userId))
-            {
-                return Unauthorized("User not found.");
-            }
-
             try
             {
-                var users = await userService.GetAllUsersAsync(false); // false: exclude soft-deleted users
+                var users = await userService.GetAllUsersAsync(false);
                 return Ok(users);
             }
             catch (Exception ex)
@@ -143,25 +132,16 @@ namespace QuickMart.Controller
             }
         }
 
-
-
         /// <summary>
         /// Retrieves soft-deleted users (Admin/Manager role required).
         /// </summary>
-        /// <returns>Returns a list of soft-deleted users.</returns>
-        /// <response code="200">Returns the list of soft-deleted users.</response>
-        /// <response code="401">If the user is not authorized.</response>
-        /// <response code="500">If an error occurs while fetching the soft-deleted users.</response>
         [HttpGet("softdeleted")]
         [Authorize(Roles = "Admin,Manager")]
+        [SwaggerResponse(200, "List of soft-deleted users retrieved successfully.", typeof(IEnumerable<ApplicationUserDTO>))]
+        [SwaggerResponse(401, "Unauthorized.")]
+        [SwaggerResponse(500, "Internal server error.")]
         public async Task<IActionResult> GetSoftDeletedUsers()
         {
-            var userId = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userId))
-            {
-                return Unauthorized("User not found.");
-            }
-
             try
             {
                 var users = await userService.GetSoftDeletedUsersAsync();
@@ -173,31 +153,24 @@ namespace QuickMart.Controller
             }
         }
 
+        #endregion
 
+        #region User Updates and Deletions
 
         /// <summary>
         /// Updates user data by user ID.
         /// </summary>
-        /// <param name="id">The user ID to update.</param>
-        /// <param name="userDTO">The user data to be updated.</param>
-        /// <returns>Returns the updated user data.</returns>
-        /// <response code="200">Returns the updated user data.</response>
-        /// <response code="400">If the user data is invalid.</response>
-        /// <response code="404">If the user is not found.</response>
-        /// <response code="500">If an error occurs while updating the user.</response>
         [HttpPut("{id}")]
         [Authorize(Roles = "Admin,User")]
+        [SwaggerResponse(200, "User updated successfully.", typeof(ApplicationUserDTO))]
+        [SwaggerResponse(400, "Invalid user data.")]
+        [SwaggerResponse(404, "User not found.")]
+        [SwaggerResponse(500, "Internal server error.")]
         public async Task<IActionResult> UpdateUser(string id, [FromBody] ApplicationUserDTO userDTO)
         {
             if (userDTO == null || string.IsNullOrEmpty(id))
             {
                 return BadRequest("Invalid user data.");
-            }
-
-            var userId = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userId))
-            {
-                return Unauthorized("User not found.");
             }
 
             try
@@ -216,27 +189,16 @@ namespace QuickMart.Controller
             }
         }
 
-
-
         /// <summary>
         /// Soft deletes a user by ID (Admin role required).
         /// </summary>
-        /// <param name="id">The user ID to be soft deleted.</param>
-        /// <returns>Returns a message if the user is successfully soft-deleted.</returns>
-        /// <response code="200">If the user was soft-deleted successfully.</response>
-        /// <response code="401">If the user is not authorized.</response>
-        /// <response code="404">If the user is not found.</response>
-        /// <response code="500">If an error occurs while deleting the user.</response>
         [HttpDelete("{id}")]
         [Authorize(Roles = "Admin")]
+        [SwaggerResponse(200, "User soft deleted successfully.")]
+        [SwaggerResponse(404, "User not found.")]
+        [SwaggerResponse(500, "Internal server error.")]
         public async Task<IActionResult> SoftDeleteUser(string id)
         {
-            var userId = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userId))
-            {
-                return Unauthorized("User not found.");
-            }
-
             try
             {
                 var result = await userService.SoftDeleteUserAsync(id);
@@ -253,18 +215,17 @@ namespace QuickMart.Controller
             }
         }
 
+        #endregion
 
+        #region Role Management
 
         /// <summary>
         /// Creates a new role (Admin role required).
         /// </summary>
-        /// <param name="roleName">The name of the role to be created.</param>
-        /// <returns>Returns the created role.</returns>
-        /// <response code="201">If the role was successfully created.</response>
-        /// <response code="400">If the role name is invalid.</response>
-        /// <response code="500">If an error occurs while creating the role.</response>
         [HttpPost("CreateRole")]
-        [Authorize(Roles = "Admin")]
+        [SwaggerResponse(201, "Role created successfully.", typeof(IdentityRole))]
+        [SwaggerResponse(400, "Invalid role name.")]
+        [SwaggerResponse(500, "Internal server error.")]
         public async Task<IActionResult> CreateRole([FromBody] string roleName)
         {
             if (string.IsNullOrEmpty(roleName))
@@ -283,18 +244,17 @@ namespace QuickMart.Controller
             }
         }
 
+        #endregion
 
+        #region Password Reset
 
         /// <summary>
         /// Sends a password reset link to the specified email address.
         /// </summary>
-        /// <param name="forgotPasswordDTO">The email address to send the reset link.</param>
-        /// <returns>Returns a message indicating if the reset link has been sent.</returns>
-        /// <response code="200">If the reset link was sent successfully.</response>
-        /// <response code="400">If the email is invalid.</response>
-        /// <response code="404">If the user is not found.</response>
-        /// <response code="500">If an error occurs while sending the reset link.</response>
         [HttpPost("forgotpassword")]
+        [SwaggerResponse(200, "Password reset link sent successfully.")]
+        [SwaggerResponse(400, "Email is required.")]
+        [SwaggerResponse(500, "Internal server error.")]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDTO forgotPasswordDTO)
         {
             if (string.IsNullOrEmpty(forgotPasswordDTO.Email))
@@ -318,17 +278,13 @@ namespace QuickMart.Controller
             }
         }
 
-
-
         /// <summary>
         /// Resets the password using the specified token.
         /// </summary>
-        /// <param name="resetPasswordDTO">The reset password data (email, token, new password).</param>
-        /// <returns>Returns a message indicating if the password was successfully reset.</returns>
-        /// <response code="200">If the password was reset successfully.</response>
-        /// <response code="400">If the data is invalid or the token is incorrect.</response>
-        /// <response code="500">If an error occurs while resetting the password.</response>
         [HttpPost("resetpassword")]
+        [SwaggerResponse(200, "Password has been reset successfully.")]
+        [SwaggerResponse(400, "Invalid token or email.")]
+        [SwaggerResponse(500, "Internal server error.")]
         public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDTO resetPasswordDTO)
         {
             if (string.IsNullOrEmpty(resetPasswordDTO.Token) || string.IsNullOrEmpty(resetPasswordDTO.Email) || string.IsNullOrEmpty(resetPasswordDTO.NewPassword))
@@ -351,5 +307,7 @@ namespace QuickMart.Controller
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
+
+        #endregion
     }
 }

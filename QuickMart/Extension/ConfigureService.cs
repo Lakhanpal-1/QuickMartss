@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
-using System.Text;
 using Microsoft.OpenApi.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -12,6 +11,7 @@ using QuickMart.Services.Helpers;
 using QuickMart.Services.Mapper;
 using QuickMart.Services.Services.IServices;
 using QuickMart.Services.Services;
+using System.Text;
 
 namespace QuickMart.Extension
 {
@@ -25,15 +25,11 @@ namespace QuickMart.Extension
             // ===================== Identity Configuration =====================
             ConfigureIdentity(services);
 
-            // ===================== Register Repositories =====================
-            services.AddScoped<IUserRepository, UserRepository>();
-            services.AddScoped<IProductRepository, ProductRepository>();
+            // =====================  Repositories =====================
+            ConfigureRepositories(services);
 
-            // ===================== Register Services =====================
-            services.AddScoped<JwtHelper>();
-            services.AddScoped<IUserService, UserService>();
-            services.AddScoped<IProductService, ProductService>();
-            ConfigureEmailService(services, configuration);
+            // ===================== Services =====================
+            ConfigureServices(services, configuration);
 
             // ===================== AutoMapper Configuration =====================
             services.AddAutoMapper(typeof(MappingProfile));
@@ -63,6 +59,20 @@ namespace QuickMart.Extension
             services.AddIdentity<ApplicationUser, IdentityRole>()
                 .AddEntityFrameworkStores<ApplicationDbContext>()
                 .AddDefaultTokenProviders();
+        }
+
+        private static void ConfigureRepositories(IServiceCollection services)
+        {
+            services.AddScoped<IUserRepository, UserRepository>();
+            services.AddScoped<IProductRepository, ProductRepository>();
+        }
+
+        private static void ConfigureServices(IServiceCollection services, IConfiguration configuration)
+        {
+            services.AddScoped<JwtHelper>();
+            services.AddScoped<IUserService, UserService>();
+            services.AddScoped<IProductService, ProductService>();
+            ConfigureEmailService(services, configuration);
         }
 
         private static void ConfigureEmailService(IServiceCollection services, IConfiguration configuration)
@@ -143,10 +153,6 @@ namespace QuickMart.Extension
                     BearerFormat = "JWT"
                 });
 
-                // Map IFormFile to Swagger as binary
-                c.MapType<IFormFile>(() => new OpenApiSchema { Type = "string", Format = "binary" });
-
-                // Add security requirement
                 c.AddSecurityRequirement(new OpenApiSecurityRequirement
                 {
                     {

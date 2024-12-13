@@ -18,13 +18,13 @@ namespace QuickMart.Services.DTO
 
         [Required]
         [StringLength(100, MinimumLength = 6)]
-        public string? PasswordHash { get; set; }
+        public string? Password { get; set; }
 
         [StringLength(255)]
-        public string Address { get; set; }
+        public string? Address { get; set; }
 
-        [Required]
+       
         [StringLength(50)]
-        public string Role { get; set; }
+        public string? Role { get; set; }
     }
 }

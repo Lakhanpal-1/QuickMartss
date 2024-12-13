@@ -31,5 +31,8 @@ namespace QuickMart.Data.Entities
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? UpdatedAt { get; set; }
+
+        // New property to store the image URL
+        public string? ImageUrl { get; set; }
     }
 }

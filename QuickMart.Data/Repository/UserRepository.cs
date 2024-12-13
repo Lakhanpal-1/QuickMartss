@@ -31,35 +31,48 @@ namespace QuickMart.Data.Repository
 
         public async Task<ApplicationUserDTO> CreateUserAsync(ApplicationUserDTO userDTO, string roleName)
         {
+            // If no role is provided, default to "User"
+            if (string.IsNullOrEmpty(roleName))
+            {
+                roleName = "User"; // Default role is "User"
+            }
+
+            // Check if the user already exists
             var existingUser = await userManager.FindByEmailAsync(userDTO.Email);
             if (existingUser != null)
             {
                 throw new Exception($"A user with the email '{userDTO.Email}' already exists.");
             }
 
+            // Map userDTO to ApplicationUser
             var user = mapper.Map<ApplicationUser>(userDTO);
             user.UserName = userDTO.Email;
 
-            var result = await userManager.CreateAsync(user, userDTO.PasswordHash);
+            // Create the user
+            var result = await userManager.CreateAsync(user, userDTO.Password);
             if (!result.Succeeded)
             {
                 throw new Exception($"User creation failed: {string.Join(", ", result.Errors.Select(e => e.Description))}");
             }
 
+            // Check if the role exists
             var roleExists = await roleManager.RoleExistsAsync(roleName);
             if (!roleExists)
             {
                 throw new Exception($"Role '{roleName}' does not exist.");
             }
 
+            // Assign the role to the user
             var roleAssignmentResult = await userManager.AddToRoleAsync(user, roleName);
             if (!roleAssignmentResult.Succeeded)
             {
                 throw new Exception($"Role assignment failed: {string.Join(", ", roleAssignmentResult.Errors.Select(e => e.Description))}");
             }
 
+            // Return the user data as DTO
             return mapper.Map<ApplicationUserDTO>(user);
         }
+
 
         public async Task<ApplicationUserDTO> GetUserByUserIdAsync(string userId)
         {

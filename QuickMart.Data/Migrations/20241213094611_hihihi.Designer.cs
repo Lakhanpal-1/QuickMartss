@@ -12,8 +12,8 @@ using QuickMart.Data.DbContext;
 namespace QuickMart.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20241212123732_initloadsss")]
-    partial class initloadsss
+    [Migration("20241213094611_hihihi")]
+    partial class hihihi
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -167,7 +167,6 @@ namespace QuickMart.Data.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("Address")
-                        .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
 
@@ -261,6 +260,12 @@ namespace QuickMart.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
+
+                    b.Property<decimal?>("DiscountPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
 
                     b.Property<string>("Name")
                         .IsRequired()

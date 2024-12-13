@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using AutoMapper;
 using QuickMart.Data.DTO;
@@ -22,18 +21,35 @@ namespace QuickMart.Services.Services
             _mapper = mapper;
         }
 
+        #region Product Retrieval Methods
+
+        // Step 1: Get all products
         public async Task<IEnumerable<ProductDTO>> GetAllProductsAsync()
         {
             var products = await _productRepository.GetAllProductsAsync();
-            return _mapper.Map<IEnumerable<ProductDTO>>(products);
+            var productDTOs = _mapper.Map<IEnumerable<ProductDTO>>(products);
+            return productDTOs;
         }
 
+        // Step 2: Get product by ID
         public async Task<ProductDTO> GetProductByIdAsync(int productId)
         {
             var product = await _productRepository.GetProductByIdAsync(productId);
-            return _mapper.Map<ProductDTO>(product);
+
+            if (product == null)
+            {
+                return null; // Or handle as necessary
+            }
+
+            var productDTO = _mapper.Map<ProductDTO>(product);
+            return productDTO;
         }
 
+        #endregion
+
+        #region Product Creation and Update Methods
+
+        // Step 3: Create a new product
         public async Task<ProductDTO> CreateProductAsync(ProductDTO productDTO)
         {
             var product = new Product
@@ -42,36 +58,52 @@ namespace QuickMart.Services.Services
                 Description = productDTO.Description,
                 Price = productDTO.Price,
                 StockQuantity = productDTO.StockQuantity,
-                IsActive = productDTO.IsActive,   // Mapping IsActive to the entity
-                DiscountPrice = productDTO.DiscountPrice, // Mapping DiscountPrice to the entity
+                IsActive = productDTO.IsActive,
+                DiscountPrice = productDTO.DiscountPrice,
                 CreatedAt = DateTime.UtcNow
             };
 
-            var createdProduct = await _productRepository.CreateProductAsync(product);
+            var createdProduct = await _productRepository.CreateProductAsync(product, productDTO.ProductImage);
 
-            return new ProductDTO
+            var createdProductDTO = new ProductDTO
             {
                 ProductId = createdProduct.ProductId,
                 Name = createdProduct.Name,
                 Description = createdProduct.Description,
                 Price = createdProduct.Price,
                 StockQuantity = createdProduct.StockQuantity,
-                IsActive = createdProduct.IsActive, // Mapping IsActive back to DTO
-                DiscountPrice = createdProduct.DiscountPrice // Mapping DiscountPrice back to DTO
+                IsActive = createdProduct.IsActive,
+                DiscountPrice = createdProduct.DiscountPrice,
+                ImageUrl = createdProduct.ImageUrl
             };
+
+            return createdProductDTO;
         }
 
+        // Step 4: Update an existing product
         public async Task<ProductDTO> UpdateProductAsync(int productId, ProductDTO productDTO)
         {
             var product = _mapper.Map<Product>(productDTO);
-            product.ProductId = productId; // Ensure the ID is set for update
+            product.ProductId = productId;
+
             var updatedProduct = await _productRepository.UpdateProductAsync(product);
-            return _mapper.Map<ProductDTO>(updatedProduct);
+
+            var updatedProductDTO = _mapper.Map<ProductDTO>(updatedProduct);
+
+            return updatedProductDTO;
         }
 
+        #endregion
+
+        #region Product Deletion Methods
+
+        // Step 5: Delete a product
         public async Task<bool> DeleteProductAsync(int productId)
         {
-            return await _productRepository.DeleteProductAsync(productId);
+            var result = await _productRepository.DeleteProductAsync(productId);
+            return result;
         }
+
+        #endregion
     }
 }
