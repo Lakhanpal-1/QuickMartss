@@ -31,10 +31,67 @@ namespace QuickMart.Data.Repository
         #region Get Product Methods
 
         // Step 1: Retrieve all products
-        public async Task<IEnumerable<Product>> GetAllProductsAsync()
+        public async Task<IEnumerable<Product>> GetAllProductsAsync(int page, int pageSize, string sortBy, string sortOrder)
         {
-            return await _context.Products.ToListAsync();
+            var query = _context.Products.AsQueryable();
+
+            // Sorting Logic
+            // Check if the sortBy parameter is valid (either "Price", "Name", etc.)
+            switch (sortBy.ToLower())
+            {
+                case "price":
+                    if (sortOrder.ToLower() == "desc")
+                    {
+                        query = query.OrderByDescending(p => p.Price);
+                    }
+                    else
+                    {
+                        query = query.OrderBy(p => p.Price);
+                    }
+                    break;
+
+                case "name":
+                    if (sortOrder.ToLower() == "desc")
+                    {
+                        query = query.OrderByDescending(p => p.Name);
+                    }
+                    else
+                    {
+                        query = query.OrderBy(p => p.Name);
+                    }
+                    break;
+
+                case "stockquantity":
+                    if (sortOrder.ToLower() == "desc")
+                    {
+                        query = query.OrderByDescending(p => p.StockQuantity);
+                    }
+                    else
+                    {
+                        query = query.OrderBy(p => p.StockQuantity);
+                    }
+                    break;
+
+                // Add more fields here as needed
+                default:
+                    if (sortOrder.ToLower() == "desc")
+                    {
+                        query = query.OrderByDescending(p => p.Name); // Default to Name if no valid sortBy field is provided
+                    }
+                    else
+                    {
+                        query = query.OrderBy(p => p.Name); // Default to Name if no valid sortBy field is provided
+                    }
+                    break;
+            }
+
+            // Pagination Logic
+            query = query.Skip((page - 1) * pageSize).Take(pageSize);
+
+            return await query.ToListAsync();
         }
+
+
 
         // Step 2: Retrieve a product by its ID
         public async Task<Product> GetProductByIdAsync(int productId)

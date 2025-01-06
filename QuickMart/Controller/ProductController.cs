@@ -29,9 +29,10 @@ namespace QuickMart.Controller
         [SwaggerResponse(200, "Products retrieved successfully.", typeof(IEnumerable<ProductDTO>))]
         [SwaggerResponse(404, "No products found.")]
         [SwaggerResponse(500, "Internal server error.")]
-        public async Task<IActionResult> GetAllProducts()
+       
+        public async Task<IActionResult> GetAllProducts(int page = 1, int pageSize = 5, string sortBy = "Name", string sortOrder = "asc")
         {
-            var products = await _productService.GetAllProductsAsync();
+            var products = await _productService.GetAllProductsAsync(page, pageSize, sortBy, sortOrder);
 
             if (products == null || !products.Any())
             {

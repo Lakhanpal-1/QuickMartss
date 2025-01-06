@@ -10,7 +10,7 @@ namespace QuickMart.Data.Repository.IRepository
     {
         #region Product Retrieval Methods
 
-        Task<IEnumerable<Product>> GetAllProductsAsync();
+        Task<IEnumerable<Product>> GetAllProductsAsync(int page, int pageSize, string sortBy, string sortOrder);
 
         Task<Product> GetProductByIdAsync(int productId);
 

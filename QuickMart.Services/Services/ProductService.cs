@@ -24,12 +24,14 @@ namespace QuickMart.Services.Services
         #region Product Retrieval Methods
 
         // Step 1: Get all products
-        public async Task<IEnumerable<ProductDTO>> GetAllProductsAsync()
+        public async Task<IEnumerable<ProductDTO>> GetAllProductsAsync(int page, int pageSize, string sortBy, string sortOrder)
         {
-            var products = await _productRepository.GetAllProductsAsync();
+            var products = await _productRepository.GetAllProductsAsync(page, pageSize, sortBy, sortOrder);
             var productDTOs = _mapper.Map<IEnumerable<ProductDTO>>(products);
             return productDTOs;
         }
+
+
 
         // Step 2: Get product by ID
         public async Task<ProductDTO> GetProductByIdAsync(int productId)
