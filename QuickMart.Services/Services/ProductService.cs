@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using AutoMapper;
 using QuickMart.Data.DTO;
 using QuickMart.Data.Entities;
+using QuickMart.Data.Repositories;
 using QuickMart.Data.Repository.IRepository;
 using QuickMart.Services.Services.IServices;
 
@@ -13,11 +14,13 @@ namespace QuickMart.Services.Services
     public class ProductService : IProductService
     {
         private readonly IProductRepository _productRepository;
+            private readonly ICategoryRepository _categoryRepository;
         private readonly IMapper _mapper;
 
-        public ProductService(IProductRepository productRepository, IMapper mapper)
+        public ProductService(IProductRepository productRepository, ICategoryRepository categoryRepository, IMapper mapper)
         {
             _productRepository = productRepository;
+            _categoryRepository = categoryRepository;
             _mapper = mapper;
         }
 
@@ -27,7 +30,10 @@ namespace QuickMart.Services.Services
         public async Task<IEnumerable<ProductDTO>> GetAllProductsAsync(int page, int pageSize, string sortBy, string sortOrder)
         {
             var products = await _productRepository.GetAllProductsAsync(page, pageSize, sortBy, sortOrder);
+
+            // Map the products to ProductDTOs
             var productDTOs = _mapper.Map<IEnumerable<ProductDTO>>(products);
+
             return productDTOs;
         }
 
@@ -54,6 +60,12 @@ namespace QuickMart.Services.Services
         // Step 3: Create a new product
         public async Task<ProductDTO> CreateProductAsync(ProductDTO productDTO)
         {
+            var category = await _categoryRepository.GetCategoryByIdAsync(productDTO.CategoryId);
+            if (category == null)
+            {
+                throw new InvalidOperationException("Invalid category.");
+            }
+
             var product = new Product
             {
                 Name = productDTO.Name,
@@ -62,6 +74,7 @@ namespace QuickMart.Services.Services
                 StockQuantity = productDTO.StockQuantity,
                 IsActive = productDTO.IsActive,
                 DiscountPrice = productDTO.DiscountPrice,
+                CategoryId = productDTO.CategoryId, // Set category ID
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -76,11 +89,14 @@ namespace QuickMart.Services.Services
                 StockQuantity = createdProduct.StockQuantity,
                 IsActive = createdProduct.IsActive,
                 DiscountPrice = createdProduct.DiscountPrice,
+                CategoryId = createdProduct.CategoryId,
+                CategoryName = createdProduct.Category?.Name, // Include category name
                 ImageUrl = createdProduct.ImageUrl
             };
 
             return createdProductDTO;
         }
+
 
         // Step 4: Update an existing product
         public async Task<ProductDTO> UpdateProductAsync(int productId, ProductDTO productDTO)

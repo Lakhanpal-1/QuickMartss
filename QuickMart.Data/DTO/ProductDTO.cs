@@ -22,4 +22,8 @@ public class ProductDTO
 
     // Image URL that will be returned after saving the image to the file system.
     public string? ImageUrl { get; set; }
+
+    // New properties to handle category information
+    public int CategoryId { get; set; }
+    public string? CategoryName { get; set; } // Include the category name here
 }

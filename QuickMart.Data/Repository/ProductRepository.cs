@@ -31,57 +31,48 @@ namespace QuickMart.Data.Repository
         #region Get Product Methods
 
         // Step 1: Retrieve all products
-        public async Task<IEnumerable<Product>> GetAllProductsAsync(int page, int pageSize, string sortBy, string sortOrder)
+        public async Task<IEnumerable<ProductDTO>> GetAllProductsAsync(int page, int pageSize, string sortBy, string sortOrder)
         {
-            var query = _context.Products.AsQueryable();
+            var query = from product in _context.Products
+                            // LEFT JOIN ensures we get null for products without a category
+                        join category in _context.Categories on product.CategoryId equals category.CategoryId into productCategory
+                        from category in productCategory.DefaultIfEmpty()  // LEFT JOIN
+
+                            // Inner Join: This will return only products that have a matching category
+                            // join category in _context.Categories on product.CategoryId equals category.CategoryId  // INNER JOIN
+
+                            // Right Join (not typically supported directly in LINQ, but can be simulated by swapping the tables in a LINQ query):
+                            // from category in _context.Categories
+                            // join product in _context.Products on category.CategoryId equals product.CategoryId into productCategory
+                            // from product in productCategory.DefaultIfEmpty()  // RIGHT JOIN
+                        select new ProductDTO
+                        {
+                            ProductId = product.ProductId,
+                            Name = product.Name,
+                            Description = product.Description,
+                            Price = product.Price,
+                            StockQuantity = product.StockQuantity,
+                            IsActive = product.IsActive,
+                            DiscountPrice = product.DiscountPrice,
+                            CategoryId = product.CategoryId,
+                            CategoryName = category != null ? category.Name : null, // Include category name
+                            ImageUrl = product.ImageUrl
+                        };
 
             // Sorting Logic
-            // Check if the sortBy parameter is valid (either "Price", "Name", etc.)
             switch (sortBy.ToLower())
             {
                 case "price":
-                    if (sortOrder.ToLower() == "desc")
-                    {
-                        query = query.OrderByDescending(p => p.Price);
-                    }
-                    else
-                    {
-                        query = query.OrderBy(p => p.Price);
-                    }
+                    query = sortOrder.ToLower() == "desc" ? query.OrderByDescending(p => p.Price) : query.OrderBy(p => p.Price);
                     break;
-
                 case "name":
-                    if (sortOrder.ToLower() == "desc")
-                    {
-                        query = query.OrderByDescending(p => p.Name);
-                    }
-                    else
-                    {
-                        query = query.OrderBy(p => p.Name);
-                    }
+                    query = sortOrder.ToLower() == "desc" ? query.OrderByDescending(p => p.Name) : query.OrderBy(p => p.Name);
                     break;
-
                 case "stockquantity":
-                    if (sortOrder.ToLower() == "desc")
-                    {
-                        query = query.OrderByDescending(p => p.StockQuantity);
-                    }
-                    else
-                    {
-                        query = query.OrderBy(p => p.StockQuantity);
-                    }
+                    query = sortOrder.ToLower() == "desc" ? query.OrderByDescending(p => p.StockQuantity) : query.OrderBy(p => p.StockQuantity);
                     break;
-
-                // Add more fields here as needed
                 default:
-                    if (sortOrder.ToLower() == "desc")
-                    {
-                        query = query.OrderByDescending(p => p.Name); // Default to Name if no valid sortBy field is provided
-                    }
-                    else
-                    {
-                        query = query.OrderBy(p => p.Name); // Default to Name if no valid sortBy field is provided
-                    }
+                    query = sortOrder.ToLower() == "desc" ? query.OrderByDescending(p => p.Name) : query.OrderBy(p => p.Name);
                     break;
             }
 
@@ -90,7 +81,6 @@ namespace QuickMart.Data.Repository
 
             return await query.ToListAsync();
         }
-
 
 
         // Step 2: Retrieve a product by its ID
@@ -107,7 +97,7 @@ namespace QuickMart.Data.Repository
         // Step 3: Create a new product, including saving an image if provided
         public async Task<Product> CreateProductAsync(Product product, IFormFile? productImage)
         {
-            // Step 3.1: Handle product image if provided
+            // Handle the product image if provided
             if (productImage != null)
             {
                 try
@@ -120,11 +110,21 @@ namespace QuickMart.Data.Repository
                 }
             }
 
-            // Step 3.2: Add product to the database
+            // Ensure that the CategoryId is valid (it should exist in the Categories table)
+            var category = await _context.Categories.FindAsync(product.CategoryId);
+            if (category == null)
+            {
+                throw new InvalidOperationException("Invalid CategoryId. The specified category does not exist.");
+            }
+
+            // Add product to the database
             _context.Products.Add(product);
             await _context.SaveChangesAsync();
+
+            // Return the newly created product (CategoryName will be fetched when querying the products)
             return product;
         }
+
 
         // Helper method to save the product image
         private async Task<string> SaveProductImageAsync(IFormFile productImage)

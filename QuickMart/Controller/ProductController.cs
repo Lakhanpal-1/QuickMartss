@@ -6,6 +6,7 @@ using QuickMart.Services.Services.IServices;
 using System.Threading.Tasks;
 using Swashbuckle.AspNetCore.Annotations;
 using System.Linq;
+using QuickMart.Services.Services;
 
 namespace QuickMart.Controller
 {
@@ -14,10 +15,13 @@ namespace QuickMart.Controller
     public class ProductController : ControllerBase
     {
         private readonly IProductService _productService;
+        private readonly ICategoryService _categoryService;
 
-        public ProductController(IProductService productService)
+        public ProductController(IProductService productService, ICategoryService categoryService)
         {
             _productService = productService;
+            _categoryService = categoryService;
+            _categoryService = categoryService;
         }
 
         #region Product Retrieval Methods
@@ -79,6 +83,13 @@ namespace QuickMart.Controller
                 return BadRequest("Product image is required.");
             }
 
+            // Check if the category exists
+            var category = await _categoryService.GetCategoryByIdAsync(productDTO.CategoryId);
+            if (category == null)
+            {
+                return BadRequest("Invalid category.");
+            }
+
             try
             {
                 var createdProduct = await _productService.CreateProductAsync(productDTO);
@@ -90,6 +101,7 @@ namespace QuickMart.Controller
                 return StatusCode(StatusCodes.Status500InternalServerError, $"Internal server error: {ex.Message}");
             }
         }
+
 
         /// <summary>
         /// Updates an existing product.

@@ -34,5 +34,11 @@ namespace QuickMart.Data.Entities
 
         // New property to store the image URL
         public string? ImageUrl { get; set; }
+
+        // Foreign Key for Category
+        public int CategoryId { get; set; }
+
+        // Navigation Property to Category
+        public Category Category { get; set; }
     }
 }

@@ -12,6 +12,7 @@ using QuickMart.Services.Mapper;
 using QuickMart.Services.Services.IServices;
 using QuickMart.Services.Services;
 using System.Text;
+using QuickMart.Data.Repositories;
 
 namespace QuickMart.Extension
 {
@@ -65,6 +66,8 @@ namespace QuickMart.Extension
         {
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IProductRepository, ProductRepository>();
+            services.AddScoped<ICategoryRepository, CategoryRepository>();
+
         }
 
         private static void ConfigureServices(IServiceCollection services, IConfiguration configuration)
@@ -72,6 +75,7 @@ namespace QuickMart.Extension
             services.AddScoped<JwtHelper>();
             services.AddScoped<IUserService, UserService>();
             services.AddScoped<IProductService, ProductService>();
+            services.AddScoped<ICategoryService, CategoryService>();
             ConfigureEmailService(services, configuration);
         }
 
